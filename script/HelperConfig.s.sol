@@ -9,6 +9,9 @@ contract HelperConfig is Script {
     // It will return the price feed address based on the network chain ID
     NetworkConfig public activeNetworkConfig;
 
+    uint8 public constant DECIMALS = 8;
+    int256 public constant INITIAL_PRICE = 2000e8; // 2000 USD in 8 decimals
+
     struct NetworkConfig {
         address priceFeed;
     }
@@ -34,7 +37,10 @@ contract HelperConfig is Script {
 
     function getAnvilEthConfig() public returns (NetworkConfig memory) {
         vm.startBroadcast();
-        MockV3Aggregator mockPriceFeed = new MockV3Aggregator(8, 2000e8); // 2000 USD in 8 decimals
+        MockV3Aggregator mockPriceFeed = new MockV3Aggregator(
+            DECIMALS,
+            INITIAL_PRICE
+        ); // 2000 USD in 8 decimals
         vm.stopBroadcast();
 
         NetworkConfig memory anvilConfig = NetworkConfig({
