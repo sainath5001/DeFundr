@@ -24,11 +24,7 @@ contract FundMeTest is Test {
     }
 
     function testOwnerIsMsgSender() public view {
-        assertEq(
-            fundMe.getOwner(),
-            msg.sender,
-            "Owner should be the message sender"
-        );
+        assertEq(fundMe.getOwner(), msg.sender, "Owner should be the message sender");
     }
 
     function testPriceFeedVersionIsAccurate() public view {
