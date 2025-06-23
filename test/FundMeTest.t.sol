@@ -51,12 +51,33 @@ contract FundMeTest is Test {
         assertEq(funder, USER, "Funder should be the user who sent the funds");
     }
 
-    function testOnlyOwnerCanWithdraw() public {
+    modifier funded() {
         vm.prank(USER);
         fundMe.fund{value: SEND_VALUE}(); // USER funds the contract
+        _;
+    }
 
+    function testOnlyOwnerCanWithdraw() public funded {
         vm.prank(USER);
         vm.expectRevert();
         fundMe.withdraw(); // USER tries to withdraw, should fail
+    }
+
+    function testWithDrawWithASingleFunder() public funded {
+        uint256 startingOwnerBalance = fundMe.getOwner().balance;
+        uint256 startingFundMeBalance = address(fundMe).balance;
+
+        vm.prank(msg.sender);
+        fundMe.withdraw(); // Owner withdraws funds
+
+        uint256 endingOwnerBalance = fundMe.getOwner().balance;
+        uint256 endingFundMeBalance = address(fundMe).balance;
+
+        assertEq(endingFundMeBalance, 0, "FundMe balance should be 0 after withdrawal");
+        assertEq(
+            startingFundMeBalance + startingOwnerBalance,
+            endingOwnerBalance,
+            "User balance should be increased by FundMe balance"
+        );
     }
 }
