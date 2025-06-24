@@ -80,4 +80,27 @@ contract FundMeTest is Test {
             "User balance should be increased by FundMe balance"
         );
     }
+
+    function testWithdrawWithMultipleFunders() public funded {
+        uint160 numberOfFunders = 10;
+        uint160 startingFunderIndex = 1; // Start from 1 to avoid USER funding themselves
+
+        for (uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
+            // address funder = makeAddr(string(abi.encodePacked("funder", i)));
+            // vm.deal(funder, SEND_VALUE);
+            // vm.prank(funder);
+            hoax(address(i), SEND_VALUE);
+            fundMe.fund{value: SEND_VALUE}();
+        }
+
+        uint256 startingOwnerBalance = fundMe.getOwner().balance;
+        uint256 startingFundMeBalance = address(fundMe).balance;
+
+        vm.startPrank(fundMe.getOwner());
+        fundMe.withdraw(); // Owner withdraws funds
+        vm.stopPrank();
+
+        assert(address(fundMe).balance == 0);
+        assert(startingFundMeBalance + startingOwnerBalance == fundMe.getOwner().balance);
+    }
 }
