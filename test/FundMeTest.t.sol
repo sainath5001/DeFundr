@@ -12,6 +12,7 @@ contract FundMeTest is Test {
     address USER = makeAddr("user");
     uint256 constant SEND_VALUE = 0.1 ether; // 0.1 ETH
     uint256 constant STARTING_BALANCE = 10 ether; // 10 ETH
+
     //uint256 constant GAS_PRICE = 1; // 1 Gwei for gas price
 
     function setUp() external {
@@ -72,7 +73,7 @@ contract FundMeTest is Test {
         // uint256 gasStart = gasleft();
         //vm.txGasPrice(GAS_PRICE);
         vm.prank(msg.sender);
-        // fundMe.withdraw(); // Owner withdraws funds
+        fundMe.withdraw(); // Owner withdraws funds
 
         // uint256 gasEnd = gasleft();
         // uint256 gasUsed = (gasStart - gasEnd) * GAS_PRICE;
@@ -106,6 +107,29 @@ contract FundMeTest is Test {
 
         vm.startPrank(fundMe.getOwner());
         fundMe.withdraw(); // Owner withdraws funds
+        vm.stopPrank();
+
+        assert(address(fundMe).balance == 0);
+        assert(startingFundMeBalance + startingOwnerBalance == fundMe.getOwner().balance);
+    }
+
+    function testWithdrawWithMultipleFundersCheaper() public funded {
+        uint160 numberOfFunders = 10;
+        uint160 startingFunderIndex = 1; // Start from 1 to avoid USER funding themselves
+
+        for (uint160 i = startingFunderIndex; i < numberOfFunders; i++) {
+            // address funder = makeAddr(string(abi.encodePacked("funder", i)));
+            // vm.deal(funder, SEND_VALUE);
+            // vm.prank(funder);
+            hoax(address(i), SEND_VALUE);
+            fundMe.fund{value: SEND_VALUE}();
+        }
+
+        uint256 startingOwnerBalance = fundMe.getOwner().balance;
+        uint256 startingFundMeBalance = address(fundMe).balance;
+
+        vm.startPrank(fundMe.getOwner());
+        fundMe.cheaperWithdraw(); // Owner withdraws funds
         vm.stopPrank();
 
         assert(address(fundMe).balance == 0);
