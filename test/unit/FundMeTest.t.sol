@@ -134,4 +134,29 @@ contract FundMeTest is Test {
         assert(address(fundMe).balance == 0);
         assert(startingFundMeBalance + startingOwnerBalance == fundMe.getOwner().balance);
     }
+
+    function testWithdrawHasNoEffectWhenNoBalance() public {
+        vm.startPrank(fundMe.getOwner());
+        fundMe.withdraw(); // First withdrawal, should succeed
+        vm.stopPrank();
+
+        uint256 startingBalance = fundMe.getOwner().balance;
+        uint256 contractBalance = address(fundMe).balance;
+
+        vm.startPrank(fundMe.getOwner());
+        fundMe.withdraw(); // Second withdrawal, should do nothing
+        vm.stopPrank();
+
+        assertEq(contractBalance, 0, "Contract balance should be 0");
+        assertEq(fundMe.getOwner().balance, startingBalance, "Owner balance should stay the same");
+    }
+
+    function testRepeatedFundingAccumulates() public {
+        vm.prank(USER);
+        fundMe.fund{value: SEND_VALUE}();
+        vm.prank(USER);
+        fundMe.fund{value: SEND_VALUE}();
+        uint256 totalFunded = fundMe.getAddressToAmountFunded(USER);
+        assertEq(totalFunded, SEND_VALUE * 2);
+    }
 }
