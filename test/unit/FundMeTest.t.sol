@@ -159,4 +159,32 @@ contract FundMeTest is Test {
         uint256 totalFunded = fundMe.getAddressToAmountFunded(USER);
         assertEq(totalFunded, SEND_VALUE * 2);
     }
+
+    function testOnlyOwnerCanCheaperWithdraw() public funded {
+        vm.prank(USER);
+        vm.expectRevert();
+        fundMe.cheaperWithdraw();
+    }
+
+    function testGasCostComparison() public funded {
+        vm.prank(USER);
+        fundMe.fund{value: SEND_VALUE}();
+
+        vm.prank(fundMe.getOwner());
+        uint256 gasStart = gasleft();
+        fundMe.withdraw();
+        uint256 gasUsedWithdraw = gasStart - gasleft();
+
+        vm.prank(USER);
+        fundMe.fund{value: SEND_VALUE}();
+
+        vm.prank(fundMe.getOwner());
+        gasStart = gasleft();
+        fundMe.cheaperWithdraw();
+        uint256 gasUsedCheaperWithdraw = gasStart - gasleft();
+
+        console.log("withdraw():", gasUsedWithdraw);
+        console.log("cheaperWithdraw():", gasUsedCheaperWithdraw);
+        assertLt(gasUsedCheaperWithdraw, gasUsedWithdraw);
+    }
 }
