@@ -6,6 +6,9 @@ import "forge-std/console.sol";
 import {FundMe} from "../../src/FundMe.sol";
 import {DeployFundMe} from "../../script/DeployFundMe.s.sol";
 
+// Adding the missing custom error here so the selector can be referenced
+error FundMe__NotOwner();
+
 contract FundMeTest is Test {
     FundMe fundMe;
 
@@ -186,5 +189,48 @@ contract FundMeTest is Test {
         console.log("withdraw():", gasUsedWithdraw);
         console.log("cheaperWithdraw():", gasUsedCheaperWithdraw);
         assertLt(gasUsedCheaperWithdraw, gasUsedWithdraw);
+    }
+
+    function testGetFunderOutOfBoundsReverts() public {
+        vm.expectRevert(); // out-of-bounds access
+        fundMe.getFunder(0);
+    }
+
+    function testGetFunderReturnsCorrectAddress() public {
+        vm.prank(USER);
+        fundMe.fund{value: SEND_VALUE}();
+        address funder = fundMe.getFunder(0);
+        assertEq(funder, USER, "Funder should be the user who sent the funds");
+    }
+
+    function testGetAddressToAmountFundedReturnsZeroForNonFunder() public {
+        address nonFunder = makeAddr("nonFunder");
+        uint256 amountFunded = fundMe.getAddressToAmountFunded(nonFunder);
+        assertEq(amountFunded, 0, "Non-funder should have zero amount funded");
+    }
+
+    function testFallbackFails() public {
+        vm.expectRevert();
+        (bool sent,) = address(fundMe).call{value: 1 ether}(""); // no data -> fallback or receive
+        require(sent, "Should revert without fund()");
+    }
+
+    function testFundersClearedAfterWithdraw() public funded {
+        address user2 = makeAddr("user2");
+        vm.deal(user2, 10 ether);
+        vm.prank(user2);
+        fundMe.fund{value: SEND_VALUE}();
+
+        vm.prank(fundMe.getOwner());
+        fundMe.withdraw();
+
+        vm.expectRevert();
+        fundMe.getFunder(1); // Second funder removed
+    }
+
+    function testOnlyOwnerCustomError() public funded {
+        vm.prank(USER);
+        vm.expectRevert(FundMe__NotOwner.selector);
+        fundMe.withdraw();
     }
 }
