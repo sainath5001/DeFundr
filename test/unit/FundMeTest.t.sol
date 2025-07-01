@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import "forge-std/console.sol";
 import {FundMe} from "../../src/FundMe.sol";
 import {DeployFundMe} from "../../script/DeployFundMe.s.sol";
+import {AggregatorV3Interface} from "@chainlink/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
 
 // Adding the missing custom error here so the selector can be referenced
 error FundMe__NotOwner();
@@ -232,5 +233,35 @@ contract FundMeTest is Test {
         vm.prank(USER);
         vm.expectRevert(FundMe__NotOwner.selector);
         fundMe.withdraw();
+    }
+
+    function testGetPriceFeed() public view {
+        AggregatorV3Interface priceFeed = fundMe.getPriceFeed();
+        assert(address(priceFeed) != address(0));
+    }
+
+    function testWithdrawCallFailure() public funded {
+        // Deploy a malicious contract that always reverts when it receives ETH
+        RevertingReceiver malicious = new RevertingReceiver();
+
+        // FundMe contract already thinks msg.sender is the owner (from setUp)
+        // But i_owner is immutable and set in the constructor, so we can't change it directly.
+        // Instead, we copy the malicious fallback code to the owner's address using vm.etch
+
+        address owner = fundMe.getOwner();
+
+        // Replace code at the owner's address with the malicious contract code
+        vm.etch(owner, address(malicious).code);
+
+        // Now when FundMe tries to send ETH to the owner, it will fail
+        vm.expectRevert(); // The `require(success)` should now fail
+        vm.prank(owner);
+        fundMe.withdraw();
+    }
+}
+
+contract RevertingReceiver {
+    fallback() external payable {
+        revert("I always fail");
     }
 }
