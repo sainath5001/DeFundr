@@ -258,6 +258,16 @@ contract FundMeTest is Test {
         vm.prank(owner);
         fundMe.withdraw();
     }
+
+    function test_FuzzingWithdraw() public funded {
+        // This test is designed to fuzz the withdraw function
+        // It will randomly call withdraw multiple times to ensure it behaves correctly
+        for (uint256 i = 0; i < 10; i++) {
+            vm.prank(fundMe.getOwner());
+            fundMe.withdraw();
+        }
+        assert(address(fundMe).balance == 0, "Contract balance should be zero after multiple withdrawals");
+    }
 }
 
 contract RevertingReceiver {
