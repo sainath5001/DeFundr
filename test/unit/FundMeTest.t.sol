@@ -268,6 +268,12 @@ contract FundMeTest is Test {
         }
         assert(address(fundMe).balance == 0, "Contract balance should be zero after multiple withdrawals");
     }
+
+    function testfuzzingfallbackfails() public {
+        vm.expectRevert();
+        (bool sent,) = address(fundMe).call{value: 1 ether}(""); // no data -> fallback or receive
+        require(sent, "Should revert without fund()");
+    }
 }
 
 contract RevertingReceiver {
